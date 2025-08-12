@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookmark Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: #2d3748;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4a5568;
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #718096;
+        }
+        /* Animation for modal */
+        .modal-enter {
+            animation: fadeIn 0.3s ease-out;
+        }
+        .modal-leave {
+            animation: fadeOut 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.95); }
+        }
+        /* Custom styles for empty state */
+        .empty-state-icon {
+            width: 80px;
+            height: 80px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300">
+
+    <!-- Main Container -->
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8 min-h-screen">
+        
+        <!-- Header -->
+        <header class="flex flex-col sm:flex-row justify-between items-center mb-8">
+            <div class="flex items-center gap-3 mb-4 sm:mb-0">
+                <div class="bg-blue-600 p-2 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Bookmark Hub</h1>
+            </div>
+            <div class="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                <button id="addBookmarkBtn" class="w-full sm:w-auto flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105 flex items-center justify-center gap-2">
+                    <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                    <span>Add New</span>
+                </button>
+                <button id="darkModeToggle" class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                    <i data-lucide="sun" class="w-5 h-5 text-gray-800 dark:hidden"></i>
+                    <i data-lucide="moon" class="w-5 h-5 text-gray-200 hidden dark:inline-block"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Search and Filter Controls -->
+        <div class="mb-6 flex flex-col md:flex-row gap-4">
+            <div class="relative flex-grow">
+                <input type="text" id="searchInput" placeholder="Search bookmarks by title or URL..." class="w-full p-3 pl-10 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></i>
+            </div>
+            <div class="flex gap-2">
+                <button id="importBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105 flex items-center justify-center gap-2">
+                    <i data-lucide="upload" class="w-5 h-5"></i>
+                </button>
+                <input type="file" id="importFile" class="hidden" accept=".json">
+                <button id="exportBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105 flex items-center justify-center gap-2">
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Bookmarks Grid -->
+        <main id="bookmarksGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Bookmark cards will be injected here -->
+        </main>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-16">
+             <div class="flex justify-center mb-4">
+                <div class="empty-state-icon bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                    <i data-lucide="bookmark-x" class="w-10 h-10 text-gray-500 dark:text-gray-400"></i>
+                </div>
+            </div>
+            <h2 class="text-xl font-semibold mb-2">No Bookmarks Found</h2>
+            <p class="text-gray-500 dark:text-gray-400">Click "Add New" to get started!</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-16">
+            <div role="status" class="flex justify-center items-center gap-4">
+                <svg aria-hidden="true" class="w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/><path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/></svg>
+                <span class="text-lg font-medium">Loading Bookmarks...</span>
+            </div>
+        </div>
+
+        <!-- User ID Display -->
+        <footer class="text-center mt-10 p-4 border-t border-gray-200 dark:border-gray-700">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                Your User ID (share for collaboration): <strong id="userIdDisplay" class="font-mono"></strong>
+            </p>
+        </footer>
+
+    </div>
+
+    <!-- Add/Edit Bookmark Modal -->
+    <div id="bookmarkModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div id="modalContent" class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-md p-6 relative">
+            <button id="closeModalBtn" class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 dark:hover:text-white">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <h2 id="modalTitle" class="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Add Bookmark</h2>
+            <form id="bookmarkForm">
+                <input type="hidden" id="bookmarkId">
+                <div class="mb-4">
+                    <label for="bookmarkTitle" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+                    <input type="text" id="bookmarkTitleInput" placeholder="e.g., Google" class="w-full p-2 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <div class="mb-6">
+                    <label for="bookmarkUrl" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URL</label>
+                    <input type="url" id="bookmarkUrlInput" placeholder="https://www.google.com" class="w-full p-2 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                </div>
+                <button type="submit" id="saveBookmarkBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                    Save Bookmark
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-gray-900 dark:bg-white text-white dark:text-black py-2 px-5 rounded-lg shadow-xl text-sm opacity-0 translate-y-10 transition-all duration-300">
+        <p id="toastMessage"></p>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, collection, addDoc, getDocs, onSnapshot, updateDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CONFIG AND INITIALIZATION ---
+        
+        // Use provided Firebase config or a default for local testing
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-bookmark-app';
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        setLogLevel('debug'); // For detailed console logs
+
+        let userId = null;
+        let bookmarksCollectionRef = null;
+        let unsubscribe = null; // To store the onSnapshot listener
+
+        // --- UI ELEMENTS ---
+        const bookmarksGrid = document.getElementById('bookmarksGrid');
+        const searchInput = document.getElementById('searchInput');
+        const addBookmarkBtn = document.getElementById('addBookmarkBtn');
+        const bookmarkModal = document.getElementById('bookmarkModal');
+        const modalContent = document.getElementById('modalContent');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const bookmarkForm = document.getElementById('bookmarkForm');
+        const modalTitle = document.getElementById('modalTitle');
+        const bookmarkIdInput = document.getElementById('bookmarkId');
+        const bookmarkTitleInput = document.getElementById('bookmarkTitleInput');
+        const bookmarkUrlInput = document.getElementById('bookmarkUrlInput');
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const emptyState = document.getElementById('emptyState');
+        const loadingState = document.getElementById('loadingState');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const importBtn = document.getElementById('importBtn');
+        const importFile = document.getElementById('importFile');
+        const exportBtn = document.getElementById('exportBtn');
+
+        // --- AUTHENTICATION ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log("User is signed in with UID:", user.uid);
+                userId = user.uid;
+                userIdDisplay.textContent = userId;
+                bookmarksCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/bookmarks`);
+                setupRealtimeListener();
+            } else {
+                console.log("User is signed out. Attempting to sign in.");
+                signIn();
+            }
+        });
+
+        async function signIn() {
+            try {
+                // Persist auth state locally
+                await setPersistence(auth, browserLocalPersistence);
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    console.log("Signing in with custom token.");
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    console.log("Signing in anonymously.");
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Authentication Error:", error);
+                showToast(`Authentication failed: ${error.message}`, 'error');
+            }
+        }
+
+
+        // --- REALTIME DATA LISTENER ---
+        function setupRealtimeListener() {
+            if (unsubscribe) {
+                unsubscribe(); // Detach any old listener
+            }
+            if (!bookmarksCollectionRef) return;
+
+            loadingState.style.display = 'block';
+            emptyState.style.display = 'none';
+            bookmarksGrid.innerHTML = '';
+
+            unsubscribe = onSnapshot(bookmarksCollectionRef, (snapshot) => {
+                console.log("Received snapshot update.");
+                const bookmarks = [];
+                snapshot.forEach(doc => {
+                    bookmarks.push({ id: doc.id, ...doc.data() });
+                });
+                renderBookmarks(bookmarks);
+                loadingState.style.display = 'none';
+                emptyState.style.display = bookmarks.length === 0 ? 'block' : 'none';
+            }, (error) => {
+                console.error("Error fetching bookmarks:", error);
+                showToast(`Error: ${error.message}`, 'error');
+                loadingState.style.display = 'none';
+            });
+        }
+
+        // --- RENDERING LOGIC ---
+        function renderBookmarks(bookmarks) {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filteredBookmarks = bookmarks.filter(bm => 
+                bm.title.toLowerCase().includes(searchTerm) || 
+                bm.url.toLowerCase().includes(searchTerm)
+            );
+
+            bookmarksGrid.innerHTML = '';
+            if (filteredBookmarks.length === 0 && bookmarks.length > 0) {
+                 bookmarksGrid.innerHTML = `<p class="text-center text-gray-500 dark:text-gray-400 col-span-full">No bookmarks match your search.</p>`;
+            } else {
+                filteredBookmarks.forEach(createBookmarkCard);
+            }
+        }
+
+        function createBookmarkCard(bookmark) {
+            const card = document.createElement('div');
+            card.className = 'bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 flex flex-col justify-between hover:shadow-lg transition-shadow duration-300';
+            card.dataset.id = bookmark.id;
+
+            const faviconUrl = `https://www.google.com/s2/favicons?domain=${bookmark.url}&sz=64`;
+            const placeholderIcon = `<div class="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-md flex items-center justify-center text-gray-500 font-bold text-lg">${bookmark.title.charAt(0).toUpperCase()}</div>`;
+
+            card.innerHTML = `
+                <div>
+                    <div class="flex items-start gap-4 mb-3">
+                        <img src="${faviconUrl}" alt="Favicon" class="w-10 h-10 rounded-md object-cover" onerror="this.outerHTML='${placeholderIcon}'">
+                        <div class="flex-1 overflow-hidden">
+                            <h3 class="font-bold text-lg truncate text-gray-900 dark:text-white" title="${bookmark.title}">${bookmark.title}</h3>
+                            <a href="${bookmark.url}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-500 hover:underline break-all" title="${bookmark.url}">${bookmark.url}</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+                    <button class="edit-btn p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i data-lucide="edit-2" class="w-4 h-4 text-gray-600 dark:text-gray-300"></i>
+                    </button>
+                    <button class="delete-btn p-2 rounded-md hover:bg-red-100 dark:hover:bg-red-900 transition-colors">
+                        <i data-lucide="trash-2" class="w-4 h-4 text-red-500"></i>
+                    </button>
+                </div>
+            `;
+
+            bookmarksGrid.appendChild(card);
+            lucide.createIcons(); // Re-render icons for new elements
+        }
+
+        // --- CRUD OPERATIONS ---
+        async function addBookmark(title, url) {
+            try {
+                await addDoc(bookmarksCollectionRef, { title, url, createdAt: new Date() });
+                showToast('Bookmark added successfully!', 'success');
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function updateBookmark(id, title, url) {
+            try {
+                const docRef = doc(db, `artifacts/${appId}/users/${userId}/bookmarks`, id);
+                await updateDoc(docRef, { title, url });
+                showToast('Bookmark updated successfully!', 'success');
+            } catch (error) {
+                console.error("Error updating document: ", error);
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteBookmark(id) {
+            try {
+                await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/bookmarks`, id));
+                showToast('Bookmark deleted.', 'info');
+            } catch (error) {
+                console.error("Error deleting document: ", error);
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // --- MODAL HANDLING ---
+        function openModal(mode = 'add', bookmark = {}) {
+            bookmarkModal.classList.remove('hidden');
+            modalContent.classList.remove('modal-leave');
+            modalContent.classList.add('modal-enter');
+            
+            if (mode === 'edit') {
+                modalTitle.textContent = 'Edit Bookmark';
+                bookmarkIdInput.value = bookmark.id;
+                bookmarkTitleInput.value = bookmark.title;
+                bookmarkUrlInput.value = bookmark.url;
+            } else {
+                modalTitle.textContent = 'Add Bookmark';
+                bookmarkForm.reset();
+                bookmarkIdInput.value = '';
+            }
+        }
+
+        function closeModal() {
+            modalContent.classList.remove('modal-enter');
+            modalContent.classList.add('modal-leave');
+            setTimeout(() => {
+                bookmarkModal.classList.add('hidden');
+            }, 300);
+        }
+
+        // --- EVENT LISTENERS ---
+        addBookmarkBtn.addEventListener('click', () => openModal('add'));
+        closeModalBtn.addEventListener('click', closeModal);
+        bookmarkModal.addEventListener('click', (e) => {
+            if (e.target === bookmarkModal) closeModal();
+        });
+
+        bookmarkForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = bookmarkIdInput.value;
+            const title = bookmarkTitleInput.value;
+            const url = bookmarkUrlInput.value;
+
+            if (id) {
+                updateBookmark(id, title, url);
+            } else {
+                addBookmark(title, url);
+            }
+            closeModal();
+        });
+
+        bookmarksGrid.addEventListener('click', (e) => {
+            const target = e.target.closest('button');
+            if (!target) return;
+
+            const card = target.closest('[data-id]');
+            const bookmarkId = card.dataset.id;
+
+            if (target.classList.contains('edit-btn')) {
+                const title = card.querySelector('h3').textContent;
+                const url = card.querySelector('a').href;
+                openModal('edit', { id: bookmarkId, title, url });
+            }
+
+            if (target.classList.contains('delete-btn')) {
+                // A more robust app would use a custom confirmation modal
+                if (confirm('Are you sure you want to delete this bookmark?')) {
+                    deleteBookmark(bookmarkId);
+                }
+            }
+        });
+
+        searchInput.addEventListener('input', async () => {
+            const allDocs = await getDocs(bookmarksCollectionRef);
+            const bookmarks = [];
+            allDocs.forEach(doc => bookmarks.push({ id: doc.id, ...doc.data() }));
+            renderBookmarks(bookmarks);
+        });
+
+        // --- DARK MODE ---
+        darkModeToggle.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+        });
+
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.documentElement.classList.add('dark');
+        }
+
+        // --- IMPORT/EXPORT ---
+        importBtn.addEventListener('click', () => importFile.click());
+        exportBtn.addEventListener('click', async () => {
+             const allDocs = await getDocs(bookmarksCollectionRef);
+             const bookmarks = [];
+             allDocs.forEach(doc => bookmarks.push({ title: doc.data().title, url: doc.data().url }));
+             
+             if(bookmarks.length === 0) {
+                showToast('No bookmarks to export.', 'info');
+                return;
+             }
+
+             const jsonString = JSON.stringify(bookmarks, null, 2);
+             const blob = new Blob([jsonString], { type: 'application/json' });
+             const url = URL.createObjectURL(blob);
+             const a = document.createElement('a');
+             a.href = url;
+             a.download = 'bookmarks.json';
+             document.body.appendChild(a);
+             a.click();
+             document.body.removeChild(a);
+             URL.revokeObjectURL(url);
+             showToast('Bookmarks exported!', 'success');
+        });
+
+        importFile.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const bookmarks = JSON.parse(e.target.result);
+                    if (!Array.isArray(bookmarks)) throw new Error("Invalid JSON format.");
+
+                    for (const bookmark of bookmarks) {
+                        if (bookmark.title && bookmark.url) {
+                            await addBookmark(bookmark.title, bookmark.url);
+                        }
+                    }
+                    showToast(`${bookmarks.length} bookmarks imported successfully!`, 'success');
+                } catch (error) {
+                    showToast(`Import failed: ${error.message}`, 'error');
+                    console.error("Import error:", error);
+                }
+            };
+            reader.readAsText(file);
+            importFile.value = ''; // Reset file input
+        });
+
+        // --- UTILITY ---
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toast.className = 'fixed bottom-5 right-5 py-2 px-5 rounded-lg shadow-xl text-sm opacity-0 translate-y-10 transition-all duration-300'; // Reset classes
+            
+            switch(type) {
+                case 'success':
+                    toast.classList.add('bg-green-600', 'text-white');
+                    break;
+                case 'error':
+                    toast.classList.add('bg-red-600', 'text-white');
+                    break;
+                default:
+                    toast.classList.add('bg-gray-900', 'dark:bg-white', 'text-white', 'dark:text-black');
+            }
+
+            toastMessage.textContent = message;
+            toast.classList.remove('opacity-0', 'translate-y-10');
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-10');
+            }, 3000);
+        }
+
+        // --- INITIAL LOAD ---
+        lucide.createIcons();
+        signIn(); // Start the authentication process on load
+    </script>
+</body>
+</html>
